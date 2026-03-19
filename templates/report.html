@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; color: #333; }
+        .header-container { display: flex; align-items: center; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-bottom: 20px; }
+        .header-logo { height: 80px; margin-right: 20px; }
+        .header-text h1 { color: #3498db; margin: 0; font-size: 24px; }
+        .header-text p { margin: 2px 0; font-weight: bold; font-size: 14px; }
+        .gen-info { text-align: right; font-style: italic; font-size: 12px; margin-bottom: 10px; }
+        
+        /* --- ML PREDICTION STYLE --- */
+        .ml-prediction-box { 
+            background: #e8f4fd; 
+            padding: 15px; 
+            border-radius: 8px; 
+            margin-bottom: 20px; 
+            border-left: 5px solid #2ecc71; 
+            font-size: 14px;
+        }
+
+        /* --- ADDED GRAPH STYLE --- */
+        .graph-container { 
+            text-align: center; 
+            margin: 20px 0; 
+            padding: 10px; 
+            border: 1px solid #eee; 
+            border-radius: 8px; 
+        }
+        .graph-container img { max-width: 100%; height: auto; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+        th { background-color: #3498db; color: white; padding: 10px; border: 1px solid #ddd; }
+        td { padding: 8px; border: 1px solid #ddd; text-align: center; }
+        tr:nth-child(even) { background-color: #f2f9ff; }
+
+        @media print { .print-btn { display: none; } }
+        .print-btn { background: #2ecc71; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 5px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <button class="print-btn" onclick="window.print()">Download PDF / Print</button>
+    
+    <div class="header-container">
+        <img src="{{ url_for('static', filename='ioelogo.png') }}" class="header-logo">
+        <div class="header-text">
+            <p>Tribhuvan University</p>
+            <p>Institute of Engineering</p>
+            <p>Purwanchal Campus</p>
+            <h1>Substation Digital Twin Real-Time</h1>
+            <p style="color: #7f8c8d; font-weight: normal;">Department of Electrical Engineering, IOE PC</p>
+        </div>
+    </div>
+
+    <div class="gen-info">Report Generated: {{ gen_time }}</div>
+
+    <div class="ml-prediction-box">
+        <strong>Machine Learning Load Forecast:</strong> 
+        <span>Next Predicted Power Consumption: <b>{{ prediction }} kW</b></span>
+    </div>
+
+    {% if prediction_plot %}
+    <div class="graph-container">
+        <h3 style="font-size: 16px; color: #2c3e50; margin-bottom: 10px;">Load Trend Analysis (Linear Regression)</h3>
+        <img src="{{ prediction_plot }}" alt="Regression Analysis Graph">
+    </div>
+    {% endif %}
+
+    <table>
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>33kV(V)</th>
+                <th>11kV(V)</th>
+                <th>33kV(A)</th>
+                <th>11kV(A)</th>
+                <th>Power(kW)</th>
+                <th>PF</th>
+                <th>Temp</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in report_rows %}
+            <tr>
+                <td>{{ row.time }}</td>
+                <td>{{ row.v33 }}</td>
+                <td>{{ row.v11 }}</td>
+                <td>{{ row.i33 }}</td>
+                <td>{{ row.i11 }}</td>
+                <td>{{ row.p }}</td>
+                <td>{{ row.pf }}</td>
+                <td>{{ row.temp }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IOE TU Substation Monitoring | Digital Twin</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@2.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&family=Montserrat:wght@500;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Roboto', sans-serif; margin: 0; padding: 0; background-color: #f0f4f8; color: #2c3e50; min-height: 100vh; display: flex; flex-direction: column; }
+        .app-header { background-color: #ffffff; padding: 15px 30px; display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid #3498db; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+        .header-left { display: flex; align-items: center; }
+        .app-header img { height: 50px; margin-right: 15px; }
+        .app-header h1 { font-family: 'Montserrat', sans-serif; color: #3498db; margin: 0; font-size: 1.6em; font-weight: 700; }
+        #live-clock { font-family: 'Montserrat', sans-serif; font-size: 1.1em; font-weight: 700; background-color: #ecf0f1; padding: 8px 15px; border-radius: 6px; }
+        
+        /* ADDED: USER INFO STYLE */
+        .user-info { display: flex; align-items: center; gap: 15px; }
+        .logout-btn { background-color: #e74c3c; color: white; text-decoration: none; padding: 8px 15px; border-radius: 6px; font-weight: bold; font-size: 0.9em; transition: 0.3s; }
+        .logout-btn:hover { background-color: #c0392b; }
+        .user-tag { font-family: 'Montserrat', sans-serif; font-size: 0.9em; font-weight: 700; color: #34495e; }
+
+        .nav-bar { background-color: #2c3e50; display: flex; justify-content: center; position: sticky; top: 0; z-index: 1000; }
+        .nav-item { color: white; padding: 15px 25px; text-decoration: none; font-family: 'Montserrat', sans-serif; font-weight: 500; cursor: pointer; transition: 0.3s; border-bottom: 4px solid transparent; }
+        .nav-item:hover { background-color: #34495e; }
+        .nav-item.active { border-bottom: 4px solid #3498db; background-color: #34495e; color: #3498db; }
+        #data-ticker-display { background-color: #34495e; color: #ffffff; text-align: center; padding: 12px; font-size: 1.2em; font-weight: 700; }
+        #ticker-value { color: #f1c40f; }
+        .status-bar { text-align: center; color: #7f8c8d; padding: 10px; font-size: 0.9em; background: #fff; border-bottom: 1px solid #ddd; }
+        .content-section { display: none; padding: 30px 20px; max-width: 1400px; margin: auto; width: 100%; box-sizing: border-box; }
+        .content-section.active { display: block; animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .dashboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+        .card { background: #ffffff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); padding: 20px; border-left: 5px solid #3498db; display: flex; flex-direction: column; justify-content: space-between; }
+        .full-width { grid-column: 1 / 5; }
+        .half-width { grid-column: span 2; }
+        .label { text-align: center; color: #7f8c8d; font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px; }
+        .gauge-value { font-family: 'Montserrat', sans-serif; font-size: 2.2em; font-weight: 700; text-align: center; color: #2c3e50; margin: 10px 0; }
+        .chart-container { height: 350px; width: 100%; position: relative; }
+        .app-footer { margin-top: auto; padding: 20px; background-color: #ffffff; color: #7f8c8d; text-align: center; font-size: 0.85em; border-top: 1px solid #e0e0e0; }
+    </style>
+</head>
+
+<body>
+    <header class="app-header">
+        <div class="header-left">
+            <img src="static/ioelogo.png" alt="IOE Logo">
+            <div>
+                <h1>Substation Digital Twin Real-Time</h1>
+                <div style="font-size: 0.8em; color: #7f8c8d;">Department of Electrical Engineering, IOE PC</div>
+            </div>
+        </div>
+        
+        <div class="user-info">
+            <div id="live-clock">Loading Clock...</div>
+            <span class="user-tag">USER: {{ user_id }}</span>
+            <a href="/logout" class="logout-btn">LOGOUT</a>
+        </div>
+    </header>
+
+    <nav class="nav-bar">
+        <div class="nav-item active" onclick="showSection('overview')">OVERVIEW</div>
+        <div class="nav-item" onclick="showSection('voltage-current')">VOLTAGE & CURRENT</div>
+        <div class="nav-item" onclick="showSection('power-pf')">POWER & ENERGY</div>
+        <a href="/history" class="nav-item">HISTORY LOGS</a>
+        <a href="/report" class="nav-item">REPORT</a>
+    </nav>
+
+    <div id="data-ticker-display">
+        <span id="ticker-label">SYSTEM STATUS</span>: <span id="ticker-value">MONITORING ACTIVE</span>
+    </div>
+
+    <div class="status-bar">
+        Connection: <span id="connection-status" style="font-weight:bold; color:#e74c3c;">Connecting to Cloud...</span>
+        | Last Sync: <span id="last-update">Waiting...</span>
+    </div>
+
+    <main>
+        <section id="overview" class="content-section active">
+            <div class="dashboard">
+                <div class="card"><div class="label">Primary Voltage (V)</div><div id="v-33kv-gauge" class="gauge-value">0.0</div></div>
+                <div class="card"><div class="label">Secondary Voltage (V)</div><div id="v-11kv-gauge" class="gauge-value">0.00</div></div>
+                <div class="card"><div class="label">Load Power (kW)</div><div id="p-active-gauge" class="gauge-value" style="color:#2ecc71">0.0</div></div>
+                <div class="card"><div class="label">Energy (kWh)</div><div id="energy-gauge" class="gauge-value" style="color:#f39c12">0.0000</div></div>
+                <div class="card full-width"><div class="label">Live Transformer Voltage (V)</div><div class="chart-container"><canvas id="overviewChart"></canvas></div></div>
+            </div>
+        </section>
+
+        <section id="voltage-current" class="content-section">
+            <div class="dashboard">
+                <div class="card"><div class="label">Coil 1 (A)</div><div id="coil1-gauge" class="gauge-value">0.0</div></div>
+                <div class="card"><div class="label">Coil 2 (A)</div><div id="coil2-gauge" class="gauge-value">0.0</div></div>
+                <div class="card"><div class="label">Coil 3 (A)</div><div id="coil3-gauge" class="gauge-value">0.0</div></div>
+                <div class="card"><div class="label">Total Secondary Load (A)</div><div id="i-11kv-gauge" class="gauge-value" style="color:#e74c3c">0.0</div></div>
+                <div class="card full-width"><div class="label">Secondary Load Breakdown (Amps)</div><div class="chart-container"><canvas id="currentTrendChart"></canvas></div></div>
+            </div>
+        </section>
+
+        <section id="power-pf" class="content-section">
+            <div class="dashboard">
+                <div class="card full-width" style="border-left: 5px solid #2ecc71;">
+                    <div class="label" style="color:#27ae60; font-weight:bold;">ML Forecast: Predicted Next Power Consumption (kW)</div>
+                    <div class="chart-container"><canvas id="predictionChart"></canvas></div>
+                </div>
+
+                <div class="card half-width">
+                    <div class="label">Primary & Secondary Current (A)</div>
+                    <div class="chart-container"><canvas id="currentCompareChart"></canvas></div>
+                </div>
+                <div class="card half-width">
+                    <div class="label">Load Power Trend (kW)</div>
+                    <div class="chart-container"><canvas id="powerCompareChart"></canvas></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="app-footer">&copy; 2026 IOE TU Substation IoT Project.</footer>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+
+        const firebaseConfig = { databaseURL: "https://digitaltwinfinal1-default-rtdb.firebaseio.com/" };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const MAX_POINTS = 30;
+        let charts = {};
+
+        window.showSection = function (sectionId) {
+            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById(sectionId).classList.add('active');
+            window.dispatchEvent(new Event('resize'));
+        }
+
+        function initAllCharts() {
+            const chartConfig = (yLabel) => ({
+                responsive: true, maintainAspectRatio: false, animation: false,
+                scales: {
+                    x: { type: 'time', time: { unit: 'second' }, grid: { display: false } },
+                    y: { title: { display: true, text: yLabel } }
+                }
+            });
+
+            charts.overview = new Chart(document.getElementById('overviewChart'), {
+                type: 'line',
+                data: { datasets: [{ label: 'Primary V', borderColor: '#3498db', data: [] }, { label: 'Secondary V', borderColor: '#e67e22', data: [] }] },
+                options: chartConfig('Volts')
+            });
+
+            charts.current = new Chart(document.getElementById('currentTrendChart'), {
+                type: 'line',
+                data: { datasets: [{ label: 'Sec Load (A)', borderColor: '#e74c3c', data: [] }] },
+                options: chartConfig('Amps')
+            });
+
+            charts.currentCompare = new Chart(document.getElementById('currentCompareChart'), {
+                type: 'line',
+                data: { datasets: [
+                    { label: 'Primary I (A)', borderColor: '#9b59b6', data: [] },
+                    { label: 'Secondary I (A)', borderColor: '#e74c3c', data: [] }
+                ]},
+                options: chartConfig('Amps')
+            });
+
+            charts.power = new Chart(document.getElementById('powerCompareChart'), {
+                type: 'line',
+                data: { datasets: [{ label: 'Power (kW)', borderColor: '#2ecc71', data: [] }] },
+                options: chartConfig('kW')
+            });
+
+            charts.prediction = new Chart(document.getElementById('predictionChart'), {
+                type: 'line',
+                data: { datasets: [{ 
+                    label: 'Predicted kW', 
+                    borderColor: '#2ecc71', 
+                    borderDash: [5, 5], 
+                    backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                    fill: true,
+                    data: [] 
+                }] },
+                options: chartConfig('kW')
+            });
+        }
+
+        function pushData(chart, datasetIndex, time, value) {
+            if(!chart || !chart.data.datasets[datasetIndex] || value === undefined) return;
+            chart.data.datasets[datasetIndex].data.push({ x: time, y: parseFloat(value) || 0 });
+            if (chart.data.datasets[datasetIndex].data.length > MAX_POINTS) chart.data.datasets[datasetIndex].data.shift();
+            chart.update('none');
+        }
+
+        const substationRef = ref(db, 'substationData'); 
+        onValue(substationRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                document.getElementById('connection-status').textContent = 'Live Cloud';
+                document.getElementById('connection-status').style.color = '#2ecc71';
+                document.getElementById('last-update').textContent = data.timestamp || "Syncing...";
+                const time = new Date().getTime();
+
+                if(data.v_33kv !== undefined) document.getElementById('v-33kv-gauge').textContent = parseFloat(data.v_33kv).toFixed(1);
+                if(data.v_11kv !== undefined) document.getElementById('v-11kv-gauge').textContent = parseFloat(data.v_11kv).toFixed(2);
+                if(data.active_power !== undefined) document.getElementById('p-active-gauge').textContent = parseFloat(data.active_power).toFixed(3);
+                if(data.energy_kwh !== undefined) document.getElementById('energy-gauge').textContent = parseFloat(data.energy_kwh).toFixed(4);
+                if(data.i_11kv !== undefined) document.getElementById('i-11kv-gauge').textContent = parseFloat(data.i_11kv).toFixed(2);
+                if(data.coil1 !== undefined) document.getElementById('coil1-gauge').textContent = parseFloat(data.coil1).toFixed(2);
+                if(data.coil2 !== undefined) document.getElementById('coil2-gauge').textContent = parseFloat(data.coil2).toFixed(2);
+                if(data.coil3 !== undefined) document.getElementById('coil3-gauge').textContent = parseFloat(data.coil3).toFixed(2);
+
+                if(data.v_33kv !== undefined) pushData(charts.overview, 0, time, data.v_33kv);
+                if(data.v_11kv !== undefined) pushData(charts.overview, 1, time, data.v_11kv);
+                if(data.i_11kv !== undefined) pushData(charts.current, 0, time, data.i_11kv);
+                if(data.active_power !== undefined) pushData(charts.power, 0, time, data.active_power);
+                if(data.i_33kv !== undefined) pushData(charts.currentCompare, 0, time, data.i_33kv);
+                if(data.i_11kv !== undefined) pushData(charts.currentCompare, 1, time, data.i_11kv);
+            }
+        });
+
+        const socket = io();
+        socket.on("ml_prediction", (data) => {
+            const time = new Date().getTime();
+            if(data.val !== undefined && typeof data.val === 'number') {
+                pushData(charts.prediction, 0, time, data.val);
+            }
+        });
+
+        initAllCharts();
+        setInterval(() => { document.getElementById('live-clock').textContent = new Date().toLocaleString(); }, 1000);
+    </script>
+</body>
+</html>

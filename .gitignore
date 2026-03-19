@@ -1,0 +1,9 @@
+# Ignore cloud credentials
+serviceAccountKey.json
+*.env
+
+# Ignore Python environments
+__pycache__/
+venv/
+env/
+.venv/

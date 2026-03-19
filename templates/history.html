@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Substation History Logs</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; padding: 40px; }
+        .log-container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 1100px; margin: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: center; }
+        th { background: #2c3e50; color: white; }
+        .back-btn { display: inline-block; margin-bottom: 20px; text-decoration: none; color: #3498db; font-weight: bold; }
+        tr:nth-child(even) { background: #fafafa; }
+        
+        /* --- ADDED ML STATUS STYLE --- */
+        .ml-status { 
+            font-size: 0.85em; 
+            color: #27ae60; 
+            background: #eafaf1; 
+            padding: 5px 10px; 
+            border-radius: 4px; 
+            display: inline-block; 
+            margin-left: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="log-container">
+        <a href="/" class="back-btn">← Back to Dashboard</a>
+        
+        <h2>
+            📊 Substation Historical Logs 
+            <span class="ml-status">● ML Engine Active: Syncing Logs</span>
+        </h2>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Primary V</th>
+                    <th>Secondary V</th>
+                    <th>Load (kW)</th>
+                    <th>Energy (kWh)</th>
+                </tr>
+            </thead>
+            <tbody id="log-body"></tbody>
+        </table>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+
+        const firebaseConfig = { databaseURL: "https://digitaltwinfinal1-default-rtdb.firebaseio.com/" };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const logBody = document.getElementById('log-body');
+
+        // Keeping your existing Firebase logic exactly the same
+        onValue(ref(db, 'substationData'), (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                const row = `<tr>
+                    <td>${data.timestamp}</td>
+                    <td>${data.v_33kv}V</td>
+                    <td>${data.v_11kv}V</td>
+                    <td>${parseFloat(data.active_power).toFixed(3)}kW</td>
+                    <td>${data.energy_kwh}</td>
+                </tr>`;
+                logBody.insertAdjacentHTML('afterbegin', row);
+                if (logBody.children.length > 50) logBody.lastChild.remove();
+            }
+        });
+    </script>
+</body>
+</html>
