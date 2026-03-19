@@ -235,7 +235,10 @@ def report():
                          prediction_plot=plot_base64,
                          gen_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
+# --- MOVE THIS OUTSIDE THE IF STATEMENT ---
+# This ensures the MQTT background thread starts on Render / Gunicorn
+Thread(target=mqtt_run, daemon=True).start()
+
 if __name__ == '__main__':
-    Thread(target=mqtt_run, daemon=True).start()
     print("🌍 Web Dashboard: http://localhost:8080")
     socketio.run(app, host='0.0.0.0', port=8080, log_output=True)

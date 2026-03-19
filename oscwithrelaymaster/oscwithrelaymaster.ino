@@ -44,36 +44,51 @@ PubSubClient client(espClient);
 
 // --- NEW OSC RECEIVE HANDLERS FOR RELAYS ---
 // Unreal Engine should send an integer (1 to trip/turn ON, 0 to turn OFF)
-void tripRelayPri(OSCMessage &msg) {
-  if (msg.isInt(0)) {
-    int state = msg.getInt(0);
-    digitalWrite(relayPri, state > 0 ? HIGH : LOW);
-    Serial.printf("Primary Relay set to: %d\n", state);
-  }
+int getOSCState(OSCMessage &msg) {
+  if (msg.isInt(0)) return msg.getInt(0);
+  if (msg.isFloat(0)) return (int)msg.getFloat(0);
+  return 0; // Default to OFF if data is invalid
 }
 
-void tripRelaySec1(OSCMessage &msg) {
-  if (msg.isInt(0)) {
-    int state = msg.getInt(0);
-    digitalWrite(relaySec1, state > 0 ? HIGH : LOW);
-    Serial.printf("Secondary Relay 1 set to: %d\n", state);
+void tripRelayPri(OSCMessage &msg) {
+  Serial.println("\n--- NEW OSC MESSAGE RECEIVED ---");
+  Serial.printf("Total pieces of data in message: %d\n", msg.size());
+  
+  if (msg.isFloat(0)) {
+    float rawVal = msg.getFloat(0);
+    Serial.printf("Data at Index 0 is a FLOAT with value: %f\n", rawVal);
+    
+    int state = (int)rawVal;
+    digitalWrite(relayPri, state > 0 ? HIGH : LOW);
+    Serial.printf("Primary Relay actually set to: %d\n", state);
+  } 
+  else if (msg.isInt(0)) {
+    int rawVal = msg.getInt(0);
+    Serial.printf("Data at Index 0 is an INT with value: %d\n", rawVal);
+    
+    digitalWrite(relayPri, rawVal > 0 ? HIGH : LOW);
+    Serial.printf("Primary Relay actually set to: %d\n", rawVal);
+  } 
+  else {
+    Serial.println("ERROR: Data is neither Float nor Int. It is something else!");
   }
+}
+void tripRelaySec1(OSCMessage &msg) {
+  int state = getOSCState(msg);
+  digitalWrite(relaySec1, state > 0 ? HIGH : LOW);
+  Serial.printf("Secondary Relay 1 set to: %d\n", state);
 }
 
 void tripRelaySec2(OSCMessage &msg) {
-  if (msg.isInt(0)) {
-    int state = msg.getInt(0);
-    digitalWrite(relaySec2, state > 0 ? HIGH : LOW);
-    Serial.printf("Secondary Relay 2 set to: %d\n", state);
-  }
+  int state = getOSCState(msg);
+  digitalWrite(relaySec2, state > 0 ? HIGH : LOW);
+  Serial.printf("Secondary Relay 2 set to: %d\n", state);
 }
 
 void tripRelaySec3(OSCMessage &msg) {
-  if (msg.isInt(0)) {
-    int state = msg.getInt(0);
-    digitalWrite(relaySec3, state > 0 ? HIGH : LOW);
-    Serial.printf("Secondary Relay 3 set to: %d\n", state);
-  }
+  int state = getOSCState(msg);
+  digitalWrite(relaySec3, state > 0 ? HIGH : LOW);
+  Serial.printf("Secondary Relay 3 set to: %d\n", state);
 }
 
 // --- UPDATED OSC: Including S1, S2, S3 ---
@@ -174,10 +189,10 @@ void loop() {
     }
     if (!msgIN.hasError()) {
       // Route incoming addresses to their specific functions
-      msgIN.dispatch("/relay/primary", tripRelayPri);
-      msgIN.dispatch("/relay/sec1", tripRelaySec1);
-      msgIN.dispatch("/relay/sec2", tripRelaySec2);
-      msgIN.dispatch("/relay/sec3", tripRelaySec3);
+      msgIN.dispatch("/transformer/primary", tripRelayPri);
+      msgIN.dispatch("/transformer/secondary1", tripRelaySec1);
+      msgIN.dispatch("/transformer/secondary2", tripRelaySec2);
+      msgIN.dispatch("/transformer/secondary3", tripRelaySec3);
     }
   }
 
