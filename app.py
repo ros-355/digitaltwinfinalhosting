@@ -235,9 +235,8 @@ def report():
                          prediction_plot=plot_base64,
                          gen_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
-# --- MOVE THIS OUTSIDE THE IF STATEMENT ---
-# This ensures the MQTT background thread starts on Render / Gunicorn
-Thread(target=mqtt_run, daemon=True).start()
+# Use the safe SocketIO background task instead
+socketio.start_background_task(mqtt_run)
 
 if __name__ == '__main__':
     print("🌍 Web Dashboard: http://localhost:8080")
