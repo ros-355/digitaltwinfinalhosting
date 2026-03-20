@@ -185,6 +185,7 @@ def on_message(client, userdata, msg):
         print(f"⚠️ Error: {e}")
 
 def mqtt_run():
+    print("🚀 MQTT THREAD HAS WOKEN UP ON RENDER!") # <-- ADD THIS LINE
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
     client.on_message = on_message
     client.connect(MQTT_BROKER, 1883, 60)
@@ -236,8 +237,9 @@ def report():
                          gen_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
 # Use the safe SocketIO background task instead
+# --- ONLY USE THIS ONE (Delete the Thread line) ---
 socketio.start_background_task(mqtt_run)
-Thread(target=mqtt_run, daemon=True).start()
+
 if __name__ == '__main__':
     print("🌍 Web Dashboard: http://localhost:8080")
     socketio.run(app, host='0.0.0.0', port=8080, log_output=True)
