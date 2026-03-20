@@ -190,7 +190,9 @@ def mqtt_run():
     client.on_message = on_message
     client.connect(MQTT_BROKER, 1883, 60)
     client.subscribe("transformer/#")
-    client.loop_forever()
+    client.loop_start()
+    while True:
+        socketio.sleep(1)
 
 # --- MODIFIED: LOGIN ROUTE WITH FLASH ---
 @app.route('/login', methods=['GET', 'POST'])
