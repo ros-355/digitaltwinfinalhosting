@@ -225,13 +225,19 @@
             }
         });
 
-        const socket = io();
-        socket.on("ml_prediction", (data) => {
-            const time = new Date().getTime();
-            if(data.val !== undefined && typeof data.val === 'number') {
-                pushData(charts.prediction, 0, time, data.val);
-            }
-        });
+    const socket = io();
+socket.on("ml_prediction", (data) => {
+    // 🚨 ADD THIS LINE TO DEBUG:
+    console.log("🚨 ML DATA RECEIVED FROM SERVER:", data); 
+
+    const time = new Date().getTime();
+    if(data.val !== undefined && typeof data.val === 'number') {
+        pushData(charts.prediction, 0, time, data.val);
+    } else {
+        // 🚨 ADD THIS LINE TO CATCH FORMAT ERRORS:
+        console.error("Format mismatch! Could not plot data.");
+    }
+});
 
         initAllCharts();
         setInterval(() => { document.getElementById('live-clock').textContent = new Date().toLocaleString(); }, 1000);

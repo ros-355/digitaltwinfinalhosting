@@ -154,10 +154,10 @@ void setup() {
   
   // Set initial state to OFF (LOW). Note: some relay modules are active-LOW, 
   // so you might need to change these to HIGH if your relays turn on upon boot.
-  digitalWrite(relayPri, LOW);
-  digitalWrite(relaySec1, LOW);
-  digitalWrite(relaySec2, LOW);
-  digitalWrite(relaySec3, LOW);
+  digitalWrite(relayPri, HIGH);
+  digitalWrite(relaySec1, HIGH);
+  digitalWrite(relaySec2, HIGH);
+  digitalWrite(relaySec3, HIGH);
 
   lcd.init(); lcd.backlight();
   lcd.print("System Starting");
