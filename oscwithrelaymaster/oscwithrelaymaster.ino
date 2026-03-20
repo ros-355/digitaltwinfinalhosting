@@ -12,7 +12,7 @@ const char* password = "1234567890";
 const char* mqtt_broker = "broker.hivemq.com";
 
 // --- OSC Configuration ---
-const IPAddress pcIP(192, 168, 0, 108); 
+const IPAddress pcIP(192, 168, 0, 104); 
 const unsigned int pcPort = 8000; 
 WiFiUDP Udp;
 

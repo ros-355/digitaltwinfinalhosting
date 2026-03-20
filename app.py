@@ -1,5 +1,10 @@
 import eventlet
 eventlet.monkey_patch()
+
+# Your other imports go down here...
+from flask import Flask, render_template
+import eventlet
+eventlet.monkey_patch()
 import os
 import json
 import paho.mqtt.client as mqtt
