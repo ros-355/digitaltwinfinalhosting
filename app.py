@@ -1,10 +1,5 @@
 import eventlet
 eventlet.monkey_patch()
-
-# Your other imports go down here...
-from flask import Flask, render_template
-import eventlet
-eventlet.monkey_patch()
 import os
 import json
 import paho.mqtt.client as mqtt
@@ -242,7 +237,7 @@ def report():
 
 # Use the safe SocketIO background task instead
 socketio.start_background_task(mqtt_run)
-
+Thread(target=mqtt_run, daemon=True).start()
 if __name__ == '__main__':
     print("🌍 Web Dashboard: http://localhost:8080")
     socketio.run(app, host='0.0.0.0', port=8080, log_output=True)
